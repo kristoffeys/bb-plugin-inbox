@@ -87,6 +87,34 @@ describe("productive target", () => {
   });
 });
 
+describe("trello target", () => {
+  it("passes the chosen list and never --attach", () => {
+    const argv = TARGETS.trello!.createArgv({
+      projectId: "proj_1",
+      title: "Fix checkout",
+      description: "body",
+      destinationId: "5f0a",
+      attachments: ["/tmp/a.pdf"],
+    });
+    expect(argv).toEqual([
+      "create", "--title", "Fix checkout", "--description", "body",
+      "--project", "proj_1",
+      "--list", "5f0a",
+      "--json",
+    ]);
+    expect(TARGETS.trello!.supportsAttachments).toBe(false);
+  });
+
+  it("reads the created key and url out of `bb trello create --json`", () => {
+    expect(
+      TARGETS.trello!.reference({
+        item: { key: "42", title: "Fix checkout", url: "https://trello.com/c/abc" },
+        warnings: [],
+      }),
+    ).toEqual({ id: "42", url: "https://trello.com/c/abc" });
+  });
+});
+
 describe("parseDraft", () => {
   const body = {
     projectId: "proj_1",

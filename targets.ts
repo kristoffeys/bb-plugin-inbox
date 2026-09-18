@@ -57,6 +57,8 @@ export type TargetDefinition = {
   destinationsArgv: (projectId: string) => string[];
   /** What the tracker calls that place, for the modal's label. */
   destinationLabel: string;
+  /** Whether this tracker's `create` command accepts `--attach`. */
+  supportsAttachments: boolean;
   /** Pull a human-facing ticket reference out of the create command's JSON. */
   reference: (payload: unknown) => { id: string; url: string | null };
 };
@@ -92,10 +94,38 @@ export const TARGETS: Record<string, TargetDefinition> = {
     statusArgv: (projectId) => ["status", "--project", projectId, "--json"],
     destinationsArgv: (projectId) => ["lists", "--project", projectId, "--json"],
     destinationLabel: "Task list",
+    supportsAttachments: true,
     // `bb productive create --json` returns { item: { locator, key, url }, … }.
     reference: (payload) => ({
       id: pick(payload, "key", "locator", "id") ?? "?",
       url: pick(payload, "url", "webUrl", "appUrl"),
+    }),
+  },
+  trello: {
+    id: "trello",
+    label: "Trello",
+    // A Trello card always lives in a list, so --list is not optional there;
+    // when it is missing the CLI's own error already says so.
+    createArgv: (input) => [
+      "create",
+      "--title",
+      input.title,
+      "--description",
+      input.description,
+      "--project",
+      input.projectId,
+      ...(input.destinationId === null ? [] : ["--list", input.destinationId]),
+      "--json",
+    ],
+    statusArgv: (projectId) => ["status", "--project", projectId, "--json"],
+    destinationsArgv: (projectId) => ["lists", "--project", projectId, "--json"],
+    destinationLabel: "List",
+    // `bb trello create` has no --attach yet, so the modal hides the picker.
+    supportsAttachments: false,
+    // `bb trello create --json` returns { item: { key, title, url }, warnings }.
+    reference: (payload) => ({
+      id: pick(payload, "key", "id") ?? "?",
+      url: pick(payload, "url", "shortUrl"),
     }),
   },
 };
@@ -177,8 +207,17 @@ export async function listDestinations(
   );
   if (result.exitCode !== 0) return [];
   try {
-    const parsed = JSON.parse(result.stdout) as Destination[];
-    return Array.isArray(parsed) ? parsed : [];
+    const parsed = JSON.parse(result.stdout) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    // Trackers agree on id/name but not on isDefault, so normalise here rather
+    // than letting a missing field fail the RPC's output schema.
+    return parsed.flatMap((entry) => {
+      const row = entry as Record<string, unknown>;
+      if (typeof row?.id !== "string" || typeof row?.name !== "string") {
+        return [];
+      }
+      return [{ id: row.id, name: row.name, isDefault: row.isDefault === true }];
+    });
   } catch {
     return [];
   }

@@ -42,7 +42,7 @@ type Status = {
   credentialsConfigured: boolean;
   aiReady: boolean;
   redirectUri: string;
-  targets: { id: string; label: string }[];
+  targets: { id: string; label: string; supportsAttachments: boolean }[];
   senders: string[];
   lastSyncedAt: string | null;
 };
@@ -110,6 +110,9 @@ function SaveTicketDialog({
   const [error, setError] = useState<string | null>(null);
   const patch = (next: Partial<TicketForm>) =>
     setForm((current) => ({ ...current, ...next }));
+  const attachmentsSupported =
+    status.targets.find((entry) => entry.id === form.target)
+      ?.supportsAttachments ?? true;
 
   useEffect(() => {
     let live = true;
@@ -237,7 +240,11 @@ function SaveTicketDialog({
               <select
                 className={fieldClass}
                 value={form.target}
-                onChange={(event) => patch({ target: event.target.value })}
+                onChange={(event) =>
+                  // A Productive task-list id means nothing to Trello, so the
+                  // destination is cleared and re-preselected per tracker.
+                  patch({ target: event.target.value, destinationId: "" })
+                }
               >
                 {status.targets.map((target) => (
                   <option key={target.id} value={target.id}>
@@ -309,7 +316,14 @@ function SaveTicketDialog({
             </label>
           )}
 
-          {message.attachments.length === 0 ? null : (
+          {message.attachments.length === 0 ? null : !attachmentsSupported ? (
+            <p className="text-xs text-muted-foreground">
+              {status.targets.find((entry) => entry.id === form.target)?.label ??
+                "This tracker"}{" "}
+              cannot take attachments, so the {message.attachments.length} file
+              {message.attachments.length === 1 ? "" : "s"} stay in the mail.
+            </p>
+          ) : (
             <div className="space-y-2 text-sm">
               <span className="text-muted-foreground">Attachments</span>
               {message.attachments.map((file) => (

@@ -1,7 +1,8 @@
 # bb-plugin-inbox
 
 Read your mailboxes inside BB, let Claude draft a ticket from a message, review it
-in a modal, then create it in Productive — attachments included.
+in a modal, then create it in Productive or Trello — attachments included
+where the tracker takes them.
 
 Nothing is ever created without the save modal. The AI only drafts.
 
@@ -34,14 +35,17 @@ SMTP: the plugin only ever reads.
 
 **Link a project** — only projects already linked to a tracker appear in the
 save modal's picker, because an unlinked one can only fail:
-`bb productive config --project <proj_id> --productive-project <id>`.
+`bb productive config --project <proj_id> --productive-project <id>` or
+`bb trello config --project <proj_id> --board <id>`.
 
 ## How it works
 
 The plugin never touches the Productive/Jira/Trello APIs. It calls the tracker
 plugin's own CLI over the server's loopback endpoint, so credentials and field
 mapping stay in the plugin that owns them. Adding a tracker is one entry in
-`targets.ts` plus a `--attach`-capable `create` command on that plugin.
+`targets.ts`. Trackers that accept `--attach` on `create` (Productive) get the
+mail's files; ones that do not (Trello) hide the attachment picker instead of
+dropping files silently.
 
 Mail access is **read-only** everywhere: the Gmail scope is `gmail.readonly`
 and every IMAP mailbox is opened with `readOnly`. Attachments are staged in the

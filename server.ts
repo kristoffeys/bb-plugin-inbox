@@ -124,7 +124,13 @@ export const rpcContract = defineRpcContract({
       credentialsConfigured: z.boolean(),
       aiReady: z.boolean(),
       redirectUri: z.string(),
-      targets: z.array(z.object({ id: z.string(), label: z.string() })),
+      targets: z.array(
+        z.object({
+          id: z.string(),
+          label: z.string(),
+          supportsAttachments: z.boolean(),
+        }),
+      ),
       senders: z.array(z.string()),
       lastSyncedAt: z.string().nullable(),
     }),
@@ -915,7 +921,9 @@ export default async function plugin(bb: BbPluginApi) {
     const message = await messageOrThrow(input.messageId);
     const created = await withStagedAttachments(
       message,
-      input.attachmentIds,
+      // Downloading files a tracker cannot receive is pure waste; the UI hides
+      // the picker too, but the CLI path reaches here as well.
+      target.supportsAttachments ? input.attachmentIds : [],
       (paths) =>
         createTicket(bb.server.loopbackBaseUrl, target, {
           projectId: input.projectId,
@@ -989,6 +997,7 @@ export default async function plugin(bb: BbPluginApi) {
         targets: Object.values(TARGETS).map((target) => ({
           id: target.id,
           label: target.label,
+          supportsAttachments: target.supportsAttachments,
         })),
         senders: parseSenders(config.senders),
         lastSyncedAt:

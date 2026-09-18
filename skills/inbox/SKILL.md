@@ -1,6 +1,6 @@
 ---
 name: inbox
-description: Read the user's mailboxes (Gmail and IMAP) and turn a message into a tracker ticket (Productive) with its attachments. Use when the user mentions their email, inbox, mailbox, "that mail from X", or asks to make a task/ticket out of an email.
+description: Read the user's mailboxes (Gmail and IMAP) and turn a message into a tracker ticket (Productive or Trello) with its attachments. Use when the user mentions their email, inbox, mailbox, "that mail from X", or asks to make a task/ticket out of an email.
 ---
 
 # Inbox → ticket
@@ -21,7 +21,7 @@ bb inbox discard <message-id> [--json]        Hide it from the list
 bb inbox restore <message-id> [--json]        Put it back
 bb inbox draft <message-id> [--instruction <text>] [--queue] [--json]
 bb inbox drafts [--json]                      Background queue + what awaits approval
-bb inbox create <message-id> --project <proj_id> [--target productive]
+bb inbox create <message-id> --project <proj_id> [--target productive|trello]
                 [--title <text>] [--description <text>] [--list <id>]
                 [--attach-all] [--json]
 ```
@@ -61,9 +61,14 @@ and deletes it afterwards, so it takes a few seconds and needs no API key.
 - Creating a ticket discards the mail automatically, so it leaves the list. Use
   `bb inbox discard` for mail that needs no ticket; both are BB-local and never
   change anything in Gmail.
+- Targets: `productive` (takes attachments) and `trello` (no attachment
+  support in `bb trello create`, so the mail's files stay in the mail).
+- Trello cards must land in a list, so `--list <list-id>` is effectively
+  required there; `bb trello lists --project <proj_id>` prints the ids.
 - The save modal only offers projects already linked to the tracker.
 - `create` fails if the bb project has no tracker linked. Check with
   `bb productive status --project <proj_id> --json` and link it with
-  `bb productive config --project <proj_id> --productive-project <id>`.
+  `bb productive config --project <proj_id> --productive-project <id>`
+  (or `bb trello status` / `bb trello config --board <id>` for Trello).
 - Message ids come from Gmail and stay stable; ticket links are remembered so
   `bb inbox list` can mark messages that already produced a ticket.
