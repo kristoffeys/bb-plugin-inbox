@@ -259,14 +259,25 @@ describe("learnedProject", () => {
     });
   });
 
-  it("returns null for an unseen sender and for pre-upgrade links", () => {
+  it("returns null for an unseen sender", () => {
     expect(learnedProject(history, "new@client.be", "productive")).toBeNull();
+  });
+
+  it("survives links stored before the sender field existed", () => {
+    // Not `from: ""` — storage is read back with a cast and no schema parse,
+    // so an older link has no `from` key at all.
+    const legacy = [{ target: "productive", projectId: "p1" }];
+    expect(learnedProject(legacy, "ann@client.be", "productive")).toBeNull();
     expect(
       learnedProject(
-        [{ from: "", target: "productive", projectId: "p1" }],
-        "",
+        [...legacy, { from: "ann@client.be", target: "productive", projectId: "p3" }],
+        "ann@client.be",
         "productive",
       ),
-    ).toBeNull();
+    ).toEqual({ projectId: "p3", count: 1 });
+  });
+
+  it("returns null when the incoming mail has no usable sender", () => {
+    expect(learnedProject(history, "", "productive")).toBeNull();
   });
 });

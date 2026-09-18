@@ -36,10 +36,12 @@ export function addressOf(from: string): string {
  * `history` is newest-first, and a client that moved to a follow-up project
  * keeps mailing from the same address.
  *
- * Links written before this shipped carry no sender and simply never match.
+ * `from` is optional because it is: links are read back from key-value storage
+ * with a cast and no schema parse, so every link written before this shipped
+ * has no sender key at all. Those simply never match.
  */
 export function learnedProject(
-  history: readonly { from: string; target: string; projectId: string }[],
+  history: readonly { from?: string; target: string; projectId: string }[],
   from: string,
   target: string,
 ): { projectId: string; count: number } | null {
@@ -49,6 +51,7 @@ export function learnedProject(
     (link) =>
       link.target === target &&
       link.projectId !== "" &&
+      typeof link.from === "string" &&
       addressOf(link.from) === address,
   );
   const counts = new Map<string, number>();
