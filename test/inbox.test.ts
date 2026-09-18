@@ -93,21 +93,22 @@ describe("productive target", () => {
 });
 
 describe("trello target", () => {
-  it("passes the chosen list and never --attach", () => {
+  it("passes the chosen list and one --attach per file", () => {
     const argv = TARGETS.trello!.createArgv({
       projectId: "proj_1",
       title: "Fix checkout",
       description: "body",
       destinationId: "5f0a",
-      attachments: ["/tmp/a.pdf"],
+      attachments: ["/tmp/a.pdf", "/tmp/b.png"],
     });
     expect(argv).toEqual([
       "create", "--title", "Fix checkout", "--description", "body",
       "--project", "proj_1",
       "--list", "5f0a",
+      "--attach", "/tmp/a.pdf", "--attach", "/tmp/b.png",
       "--json",
     ]);
-    expect(TARGETS.trello!.supportsAttachments).toBe(false);
+    expect(TARGETS.trello!.supportsAttachments).toBe(true);
   });
 
   it("reads the created key and url out of `bb trello create --json`", () => {

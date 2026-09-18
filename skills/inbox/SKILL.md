@@ -61,8 +61,7 @@ and deletes it afterwards, so it takes a few seconds and needs no API key.
 - Creating a ticket discards the mail automatically, so it leaves the list. Use
   `bb inbox discard` for mail that needs no ticket; both are BB-local and never
   change anything in Gmail.
-- Targets: `productive` (takes attachments) and `trello` (no attachment
-  support in `bb trello create`, so the mail's files stay in the mail).
+- Targets: `productive` and `trello`. Both take the mail's attachments.
 - Trello cards must land in a list, so `--list <list-id>` is effectively
   required there; `bb trello lists --project <proj_id>` prints the ids.
 - Project preselection learns: past tickets from the same sender address

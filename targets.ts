@@ -115,13 +115,13 @@ export const TARGETS: Record<string, TargetDefinition> = {
       "--project",
       input.projectId,
       ...(input.destinationId === null ? [] : ["--list", input.destinationId]),
+      ...input.attachments.flatMap((path) => ["--attach", path]),
       "--json",
     ],
     statusArgv: (projectId) => ["status", "--project", projectId, "--json"],
     destinationsArgv: (projectId) => ["lists", "--project", projectId, "--json"],
     destinationLabel: "List",
-    // `bb trello create` has no --attach yet, so the modal hides the picker.
-    supportsAttachments: false,
+    supportsAttachments: true,
     // `bb trello create --json` returns { item: { key, title, url }, warnings }.
     reference: (payload) => ({
       id: pick(payload, "key", "id") ?? "?",
