@@ -27,6 +27,44 @@ export function addressOf(from: string): string {
   return (angled?.[1] ?? from).trim().toLowerCase();
 }
 
+/**
+ * The project this sender's mail has ended up in before, if any.
+ *
+ * A plain majority over past tickets for the same tracker. Every one of those
+ * was approved by hand in the save modal, so the user's own history is better
+ * evidence than a fresh guess at the same mail. Ties go to the most recent:
+ * `history` is newest-first, and a client that moved to a follow-up project
+ * keeps mailing from the same address.
+ *
+ * Links written before this shipped carry no sender and simply never match.
+ */
+export function learnedProject(
+  history: readonly { from: string; target: string; projectId: string }[],
+  from: string,
+  target: string,
+): { projectId: string; count: number } | null {
+  const address = addressOf(from);
+  if (address === "") return null;
+  const mine = history.filter(
+    (link) =>
+      link.target === target &&
+      link.projectId !== "" &&
+      addressOf(link.from) === address,
+  );
+  const counts = new Map<string, number>();
+  for (const link of mine) {
+    counts.set(link.projectId, (counts.get(link.projectId) ?? 0) + 1);
+  }
+  let best: { projectId: string; count: number } | null = null;
+  for (const link of mine) {
+    const count = counts.get(link.projectId) ?? 0;
+    if (best === null || count > best.count) {
+      best = { projectId: link.projectId, count };
+    }
+  }
+  return best;
+}
+
 export function matchesSenders(from: string, senders: string[]): boolean {
   if (senders.length === 0) return true;
   const address = addressOf(from);

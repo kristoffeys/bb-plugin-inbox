@@ -65,6 +65,9 @@ and deletes it afterwards, so it takes a few seconds and needs no API key.
   support in `bb trello create`, so the mail's files stay in the mail).
 - Trello cards must land in a list, so `--list <list-id>` is effectively
   required there; `bb trello lists --project <proj_id>` prints the ids.
+- Project preselection learns: past tickets from the same sender address
+  decide it, and the draft's `reasoning` says how many. Nothing is created
+  without the modal, so a wrong guess costs one dropdown change.
 - The save modal only offers projects already linked to the tracker.
 - `create` fails if the bb project has no tracker linked. Check with
   `bb productive status --project <proj_id> --json` and link it with

@@ -29,7 +29,7 @@ import {
   type AccountSecrets,
   type ImapAccount,
 } from "./accounts";
-import { keepMessage, parseSenders } from "./filters";
+import { keepMessage, learnedProject, parseSenders } from "./filters";
 import { draftTicket, type ProjectHint } from "./ai";
 import {
   TARGETS,
@@ -71,6 +71,9 @@ const messageSchema = z.object({
 const linkSchema = z.object({
   messageId: z.string(),
   target: z.string(),
+  /** Sender of the mail, so past tickets can preselect a project. Links
+   *  written before this existed have none, hence the default. */
+  from: z.string().default(""),
   projectId: z.string(),
   ticketId: z.string(),
   url: z.string().nullable(),
@@ -770,13 +773,45 @@ export default async function plugin(bb: BbPluginApi) {
     messageId: string,
     instruction?: string,
   ): Promise<InboxDraft> {
-    return await draftTicket({
+    const message = await messageOrThrow(messageId);
+    const projects = await projectHints();
+    // Scoped to the default target: a Productive project id is not a project
+    // this sender's Trello cards could ever have landed in.
+    const learned = learnedProject(
+      await links(),
+      message.from,
+      config.defaultTarget,
+    );
+    const name =
+      learned === null
+        ? null
+        : (projects.find((project) => project.id === learned.projectId)?.name ??
+          null);
+    const drafted = await draftTicket({
       bb,
       projectId: await draftHostProject(),
-      message: await messageOrThrow(messageId),
-      projects: await projectHints(),
+      message,
+      projects,
+      ...(learned === null || name === null
+        ? {}
+        : { learned: { ...learned, name } }),
       instruction,
     });
+    // The model gets the history as a hint, but the preselection cannot depend
+    // on it taking the hint: the user approved every one of those past tickets
+    // by hand, so history wins whenever this mail offers nothing stronger.
+    if (learned === null || name === null) return drafted;
+    if (drafted.confidence === "high" && drafted.projectId !== "") {
+      return drafted;
+    }
+    return {
+      ...drafted,
+      projectId: learned.projectId,
+      confidence: "high",
+      reasoning: `${learned.count} earlier ticket${
+        learned.count === 1 ? "" : "s"
+      } from this sender went to ${name}.`,
+    };
   }
 
   // ------------------------------------------------------- draft queue
@@ -936,6 +971,7 @@ export default async function plugin(bb: BbPluginApi) {
     const link: TicketLink = {
       messageId: input.messageId,
       target: target.id,
+      from: message.from,
       projectId: input.projectId,
       ticketId: created.id,
       url: created.url,

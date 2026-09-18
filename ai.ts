@@ -52,9 +52,13 @@ function projectBlock(projects: ProjectHint[]): string {
     .join("\n");
 }
 
+/** What this sender's earlier, hand-approved tickets say. */
+export type LearnedProject = { projectId: string; name: string; count: number };
+
 export function buildPrompt(args: {
   message: ParsedMessage;
   projects: ProjectHint[];
+  learned?: LearnedProject;
   instruction?: string;
 }): string {
   return [
@@ -69,6 +73,14 @@ export function buildPrompt(args: {
     "",
     "Candidate projects:",
     projectBlock(args.projects),
+    ...(args.learned === undefined
+      ? []
+      : [
+          "",
+          `Earlier mail from this sender produced ${args.learned.count} ticket(s), all`,
+          `filed under id=${args.learned.projectId} (${args.learned.name}). That is real`,
+          "evidence: use it unless this email names a different project outright.",
+        ]),
     "",
     "Email:",
     "<email>",
@@ -113,6 +125,7 @@ export async function draftTicket(args: {
   projectId: string;
   message: ParsedMessage;
   projects: ProjectHint[];
+  learned?: LearnedProject;
   instruction?: string;
   timeoutMs?: number;
 }): Promise<Draft> {

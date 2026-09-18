@@ -38,6 +38,19 @@ save modal's picker, because an unlinked one can only fail:
 `bb productive config --project <proj_id> --productive-project <id>` or
 `bb trello config --project <proj_id> --board <id>`.
 
+## Learning who works on what
+
+Every created ticket records the sender it came from. When mail arrives from an
+address that has produced tickets before, the plugin votes on that sender's past
+projects and preselects the winner, with the count as the reason ("3 earlier
+tickets from this sender went to Spardex"). The model gets the same history as a
+hint, but the preselection does not depend on it taking the hint — those past
+tickets were approved by hand, so they win unless the mail names another project
+outright.
+
+History is per tracker and starts empty; the first ticket from a new sender is
+still a plain guess.
+
 ## How it works
 
 The plugin never touches the Productive/Jira/Trello APIs. It calls the tracker

@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import { htmlToText, parseMessage } from "../gmail";
 import { TARGETS } from "../targets";
 import { parseDraft } from "../ai";
-import { isMeetingInvite, matchesSenders, parseSenders } from "../filters";
+import {
+  isMeetingInvite,
+  learnedProject,
+  matchesSenders,
+  parseSenders,
+} from "../filters";
 
 const b64 = (text: string) =>
   Buffer.from(text, "utf8").toString("base64url");
@@ -217,5 +222,50 @@ describe("isMeetingInvite", () => {
 
   it("leaves real mail alone", () => {
     expect(isMeetingInvite({ ...base, subject: "Invoice 2026/114" })).toBe(false);
+  });
+});
+
+describe("learnedProject", () => {
+  // Newest-first, the order the plugin stores links in.
+  const history = [
+    { from: "Ann <ann@client.be>", target: "productive", projectId: "p2" },
+    { from: "ann@client.be", target: "productive", projectId: "p1" },
+    { from: "ANN <ann@CLIENT.be>", target: "productive", projectId: "p1" },
+    { from: "bob@other.be", target: "productive", projectId: "p9" },
+    { from: "ann@client.be", target: "trello", projectId: "p5" },
+  ];
+
+  it("takes the sender's majority project, ignoring display name and case", () => {
+    expect(learnedProject(history, "Ann Peeters <ann@client.be>", "productive"))
+      .toEqual({ projectId: "p1", count: 2 });
+  });
+
+  it("keeps each tracker's history separate", () => {
+    expect(learnedProject(history, "ann@client.be", "trello")).toEqual({
+      projectId: "p5",
+      count: 1,
+    });
+  });
+
+  it("breaks a tie towards the most recent ticket", () => {
+    const tied = [
+      { from: "ann@client.be", target: "productive", projectId: "p2" },
+      { from: "ann@client.be", target: "productive", projectId: "p1" },
+    ];
+    expect(learnedProject(tied, "ann@client.be", "productive")).toEqual({
+      projectId: "p2",
+      count: 1,
+    });
+  });
+
+  it("returns null for an unseen sender and for pre-upgrade links", () => {
+    expect(learnedProject(history, "new@client.be", "productive")).toBeNull();
+    expect(
+      learnedProject(
+        [{ from: "", target: "productive", projectId: "p1" }],
+        "",
+        "productive",
+      ),
+    ).toBeNull();
   });
 });
